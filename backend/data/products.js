@@ -3,21 +3,21 @@ module.exports = [
     id: "p1",
     title: "Печенье 'Юбилейное'",
     category: "Сладости",
-    description: "Классическое хрустящее печенье с ванильным вкусом. Идеально к чаю.",
+    description: "Классическое хрустящее печенье с ванильным вкусом.",
     price: 79,
     stock: 20,
     rating: 4.6,
-    imageUrl: "https://via.placeholder.com/150?text=Cookie"
+    imageUrl: ""
   },
   {
     id: "p2",
     title: "Молоко 'Домик в деревне'",
     category: "Напитки",
-    description: "Ультрапастеризованное молоко 2.5% жирности. 1 литр.",
+    description: "Ультрапастеризованное молоко 2.5% жирности.",
     price: 99,
     stock: 15,
     rating: 4.3,
-    imageUrl: "https://via.placeholder.com/150?text=Milk"
+    imageUrl: ""
   },
   {
     id: "p3",
@@ -27,7 +27,7 @@ module.exports = [
     price: 59,
     stock: 30,
     rating: 4.1,
-    imageUrl: "https://via.placeholder.com/150?text=Bread"
+    imageUrl: ""
   },
   {
     id: "p4",
@@ -37,7 +37,7 @@ module.exports = [
     price: 129,
     stock: 25,
     rating: 4.8,
-    imageUrl: "https://via.placeholder.com/150?text=Apple"
+    imageUrl: ""
   },
   {
     id: "p5",
@@ -47,7 +47,7 @@ module.exports = [
     price: 89,
     stock: 50,
     rating: 4.9,
-    imageUrl: "https://via.placeholder.com/150?text=Chocolate"
+    imageUrl: ""
   },
   {
     id: "p6",
@@ -57,7 +57,7 @@ module.exports = [
     price: 249,
     stock: 12,
     rating: 4.4,
-    imageUrl: "https://via.placeholder.com/150?text=Sausage"
+    imageUrl: ""
   },
   {
     id: "p7",
@@ -67,7 +67,7 @@ module.exports = [
     price: 119,
     stock: 18,
     rating: 4.2,
-    imageUrl: "https://via.placeholder.com/150?text=Juice"
+    imageUrl: ""
   },
   {
     id: "p8",
@@ -77,7 +77,7 @@ module.exports = [
     price: 139,
     stock: 22,
     rating: 4.7,
-    imageUrl: "https://via.placeholder.com/150?text=Pasta"
+    imageUrl: ""
   },
   {
     id: "p9",
@@ -87,7 +87,7 @@ module.exports = [
     price: 69,
     stock: 35,
     rating: 4.5,
-    imageUrl: "https://via.placeholder.com/150?text=Yogurt"
+    imageUrl: ""
   },
   {
     id: "p10",
@@ -97,6 +97,6 @@ module.exports = [
     price: 399,
     stock: 8,
     rating: 4.9,
-    imageUrl: "https://via.placeholder.com/150?text=Coffee"
+    imageUrl: ""
   }
 ];

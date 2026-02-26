@@ -1,19 +1,20 @@
 {
-  "name": "pr4-express-api",
-  "private": true,
+  "name": "internet-shop-api",
   "version": "1.0.0",
+  "description": "REST API для интернет-магазина с Swagger документацией",
   "main": "app.js",
-  "type": "commonjs",
   "scripts": {
-    "dev": "nodemon app.js",
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "nodemon app.js"
   },
   "dependencies": {
-    "cors": "^2.8.6",
     "express": "^4.18.2",
-    "nanoid": "^5.1.6"
+    "cors": "^2.8.5",
+    "nanoid": "^3.3.6",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.0"
+    "nodemon": "^3.0.1"
   }
 }
