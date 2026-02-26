@@ -150,43 +150,6 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-app.get("/", (req, res) => {
-  res.send(`
-    <html>
-      <head>
-        <title>Интернет-магазин API</title>
-        <style>
-          body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; background: #f5f5f5; }
-          h1 { color: #333; }
-          .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
-          a { color: #6366f1; text-decoration: none; }
-          a:hover { text-decoration: underline; }
-          .button { display: inline-block; background: #6366f1; color: white; padding: 10px 20px; border-radius: 5px; }
-          .endpoint { background: #f0f0f0; padding: 5px 10px; border-radius: 4px; font-family: monospace; }
-        </style>
-      </head>
-      <body>
-        <h1>Интернет-магазин API</h1>
-        <div class="card">
-          <h2>Доступные эндпоинты:</h2>
-          <ul>
-            <li><span class="endpoint">GET /api/products</span> - список всех товаров</li>
-            <li><span class="endpoint">GET /api/products/{id}</span> - товар по ID</li>
-            <li><span class="endpoint">POST /api/products</span> - создать новый товар</li>
-            <li><span class="endpoint">PATCH /api/products/{id}</span> - обновить товар</li>
-            <li><span class="endpoint">DELETE /api/products/{id}</span> - удалить товар</li>
-          </ul>
-        </div>
-        <div class="card">
-          <h2>📚 Интерактивная документация</h2>
-          <p>Посетите <a href="/api-docs" class="button">/api-docs</a> для работы с API через Swagger UI</p>
-          <p>Также доступна <a href="/api-docs.json">OpenAPI спецификация в JSON</a></p>
-        </div>
-      </body>
-    </html>
-  `);
-});
-
 app.use("/api/products", productsRouter);
 
 app.use((req, res) => {
