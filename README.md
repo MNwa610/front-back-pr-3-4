@@ -17,3 +17,4 @@ npm i
 npm run dev
 ```
 UI: `http://localhost:3001`
+Swagger: `http://localhost:3000/api-docs/#/`
