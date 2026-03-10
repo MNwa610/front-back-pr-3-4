@@ -2,59 +2,112 @@ const express = require("express");
 const { nanoid } = require("nanoid");
 
 const router = express.Router();
-let products = require("../data/products");
+
+let products = [
+  {
+    id: nanoid(8),
+    title: "Печенье Юбилейное",
+    category: "Сладости",
+    description: "Классическое хрустящее печенье",
+    price: 79
+  },
+  {
+    id: nanoid(8),
+    title: "Молоко Простоквашино",
+    category: "Напитки",
+    description: "Ультрапастеризованное молоко 2.5%",
+    price: 99
+  },
+  {
+    id: nanoid(8),
+    title: "Хлеб Бородинский",
+    category: "Выпечка",
+    description: "Ржаной хлеб с кориандром",
+    price: 59
+  },
+  {
+    id: nanoid(8),
+    title: "Яблоки Гренни Смит",
+    category: "Фрукты",
+    description: "Зеленые кисло-сладкие яблоки",
+    price: 129
+  },
+  {
+    id: nanoid(8),
+    title: "Шоколад Аленка",
+    category: "Сладости",
+    description: "Молочный шоколад",
+    price: 89
+  },
+  {
+    id: nanoid(8),
+    title: "Колбаса Докторская",
+    category: "Мясные изделия",
+    description: "Вареная колбаса высшего сорта",
+    price: 249
+  },
+  {
+    id: nanoid(8),
+    title: "Сок Добрый",
+    category: "Напитки",
+    description: "Апельсиновый сок 1л",
+    price: 119
+  },
+  {
+    id: nanoid(8),
+    title: "Макароны Barilla",
+    category: "Бакалея",
+    description: "Спагетти из твердых сортов",
+    price: 139
+  },
+  {
+    id: nanoid(8),
+    title: "Йогурт Activia",
+    category: "Молочные продукты",
+    description: "Питьевой йогурт с клубникой",
+    price: 69
+  },
+  {
+    id: nanoid(8),
+    title: "Кофе Lavazza",
+    category: "Напитки",
+    description: "Молотый кофе 250г",
+    price: 399
+  }
+];
 
 /**
- * Вспомогательная функция для поиска товара по ID
+ * Поиск товара по ID
  * @param {string} id - ID товара
  * @returns {Object|null} - Найденный товар или null
  */
-function findById(id) {
-  return products.find((p) => p.id === id) || null;
+function findProductById(id) {
+  return products.find(p => p.id === id) || null;
 }
 
 /**
- * Валидация данных товара
- * @param {Object} data - Данные для валидации
- * @param {boolean} isPatch - Флаг частичного обновления
- * @returns {string[]} - Массив ошибок валидации
+ * Валидация товара
+ * @param {Object} data - Данные товара
+ * @returns {string[]} - Массив ошибок
  */
-function validateProduct(data, isPatch = false) {
+function validateProduct(data) {
   const errors = [];
   
-  if (!isPatch || data.title !== undefined) {
-    if (typeof data.title !== "string" || data.title.trim() === "") {
-      errors.push("title is required (string)");
-    }
+  if (!data.title || typeof data.title !== "string" || data.title.trim() === "") {
+    errors.push("title is required (string)");
   }
   
-  if (!isPatch || data.category !== undefined) {
-    if (data.category !== undefined && (typeof data.category !== "string" || data.category.trim() === "")) {
-      errors.push("category must be a non-empty string");
-    }
+  if (!data.category || typeof data.category !== "string" || data.category.trim() === "") {
+    errors.push("category is required (string)");
   }
   
-  if (!isPatch || data.price !== undefined) {
-    const price = Number(data.price);
-    if (data.price === undefined || isNaN(price) || price < 0) {
-      errors.push("price must be a positive number");
-    }
+  if (!data.description || typeof data.description !== "string") {
+    errors.push("description is required (string)");
   }
   
-  if (!isPatch || data.stock !== undefined) {
-    const stock = Number(data.stock);
-    if (data.stock !== undefined && (isNaN(stock) || stock < 0 || !Number.isInteger(stock))) {
-      errors.push("stock must be a non-negative integer");
-    }
-  }
-  
-  if (!isPatch || data.rating !== undefined) {
-    if (data.rating !== undefined) {
-      const rating = Number(data.rating);
-      if (isNaN(rating) || rating < 0 || rating > 5) {
-        errors.push("rating must be a number between 0 and 5");
-      }
-    }
+  const price = Number(data.price);
+  if (data.price === undefined || isNaN(price) || price < 0) {
+    errors.push("price must be a positive number");
   }
   
   return errors;
@@ -63,75 +116,8 @@ function validateProduct(data, isPatch = false) {
 /**
  * @swagger
  * /api/products:
- *   get:
- *     summary: Возвращает список всех товаров
- *     description: Получить массив всех товаров в магазине
- *     tags: [Products]
- *     responses:
- *       200:
- *         description: Успешный запрос
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Product'
- *       500:
- *         description: Внутренняя ошибка сервера
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-router.get("/", (req, res) => {
-  res.json(products);
-});
-
-/**
- * @swagger
- * /api/products/{id}:
- *   get:
- *     summary: Получает товар по ID
- *     description: Возвращает один товар по его уникальному идентификатору
- *     tags: [Products]
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: ID товара
- *         example: p1234567
- *     responses:
- *       200:
- *         description: Товар найден
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
- *       404:
- *         description: Товар не найден
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *             example:
- *               error: "Product not found"
- *       500:
- *         description: Внутренняя ошибка сервера
- */
-router.get("/:id", (req, res) => {
-  const product = findById(req.params.id);
-  if (!product) return res.status(404).json({ error: "Product not found" });
-  res.json(product);
-});
-
-/**
- * @swagger
- * /api/products:
  *   post:
- *     summary: Создает новый товар
- *     description: Добавляет новый товар в каталог
+ *     summary: Создать новый товар
  *     tags: [Products]
  *     requestBody:
  *       required: true
@@ -142,85 +128,72 @@ router.get("/:id", (req, res) => {
  *             required:
  *               - title
  *               - category
+ *               - description
  *               - price
  *             properties:
  *               title:
  *                 type: string
- *                 description: Название товара
- *                 example: "Новый товар"
  *               category:
  *                 type: string
- *                 description: Категория товара
- *                 example: "Электроника"
  *               description:
  *                 type: string
- *                 description: Описание товара
- *                 example: "Описание нового товара"
  *               price:
  *                 type: number
- *                 description: Цена товара
- *                 minimum: 0
- *                 example: 999
- *               stock:
- *                 type: integer
- *                 description: Количество на складе
- *                 minimum: 0
- *                 example: 10
- *               rating:
- *                 type: number
- *                 description: Рейтинг товара (0-5)
- *                 minimum: 0
- *                 maximum: 5
- *                 example: 4.5
- *               imageUrl:
- *                 type: string
- *                 description: URL изображения
- *                 example: "https://example.com/image.jpg"
  *     responses:
  *       201:
- *         description: Товар успешно создан
+ *         description: Товар создан
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Product'
  *       400:
  *         description: Ошибка валидации
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       500:
- *         description: Внутренняя ошибка сервера
  */
 router.post("/", (req, res) => {
-  const { title, category, description, price, stock, rating, imageUrl } = req.body;
-
-  const errors = validateProduct({ title, category, description, price, stock, rating });
+  const errors = validateProduct(req.body);
   if (errors.length > 0) {
     return res.status(400).json({ errors });
   }
 
+  const { title, category, description, price } = req.body;
+  
   const newProduct = {
     id: nanoid(8),
     title: title.trim(),
-    category: category ? category.trim() : "Без категории",
-    description: description ? description.trim() : "",
-    price: Number(price),
-    stock: Number(stock) || 0,
-    rating: rating !== undefined ? Number(rating) : 0,
-    imageUrl: typeof imageUrl === "string" ? imageUrl.trim() : ""
+    category: category.trim(),
+    description: description.trim(),
+    price: Number(price)
   };
 
   products.push(newProduct);
   res.status(201).json(newProduct);
 });
 
-/*
+/**
+ * @swagger
+ * /api/products:
+ *   get:
+ *     summary: Получить список всех товаров
+ *     tags: [Products]
+ *     responses:
+ *       200:
+ *         description: Список товаров
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Product'
+ */
+router.get("/", (req, res) => {
+  res.json(products);
+});
+
+/**
  * @swagger
  * /api/products/{id}:
- *   patch:
- *     summary: Частично обновляет товар
- *     description: Обновляет одно или несколько полей товара
+ *   get:
+ *     summary: Получить товар по ID
  *     tags: [Products]
  *     parameters:
  *       - in: path
@@ -228,82 +201,81 @@ router.post("/", (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: ID товара
- *         example: p1234567
+ *     responses:
+ *       200:
+ *         description: Товар найден
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Product'
+ *       404:
+ *         description: Товар не найден
+ */
+router.get("/:id", (req, res) => {
+  const product = findProductById(req.params.id);
+  if (!product) {
+    return res.status(404).json({ error: "Product not found" });
+  }
+  res.json(product);
+});
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   put:
+ *     summary: Полное обновление товара
+ *     tags: [Products]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - title
+ *               - category
+ *               - description
+ *               - price
  *             properties:
  *               title:
  *                 type: string
- *                 description: Название товара
  *               category:
  *                 type: string
- *                 description: Категория товара
  *               description:
  *                 type: string
- *                 description: Описание товара
  *               price:
  *                 type: number
- *                 description: Цена товара
- *                 minimum: 0
- *               stock:
- *                 type: integer
- *                 description: Количество на складе
- *                 minimum: 0
- *               rating:
- *                 type: number
- *                 description: Рейтинг товара
- *                 minimum: 0
- *                 maximum: 5
- *               imageUrl:
- *                 type: string
- *                 description: URL изображения
  *     responses:
  *       200:
- *         description: Товар успешно обновлен
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
+ *         description: Товар обновлен
  *       400:
- *         description: Ошибка валидации или ничего не обновлено
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Ошибка валидации
  *       404:
  *         description: Товар не найден
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
-router.patch("/:id", (req, res) => {
-  const product = findById(req.params.id);
-  if (!product) return res.status(404).json({ error: "Product not found" });
-
-  const { title, category, description, price, stock, rating, imageUrl } = req.body;
-
-  if (Object.keys(req.body).length === 0) {
-    return res.status(400).json({ error: "Nothing to update" });
+router.put("/:id", (req, res) => {
+  const product = findProductById(req.params.id);
+  if (!product) {
+    return res.status(404).json({ error: "Product not found" });
   }
 
-  const errors = validateProduct({ title, category, description, price, stock, rating }, true);
+  const errors = validateProduct(req.body);
   if (errors.length > 0) {
     return res.status(400).json({ errors });
   }
 
-  if (title !== undefined) product.title = String(title).trim();
-  if (category !== undefined) product.category = String(category).trim();
-  if (description !== undefined) product.description = String(description).trim();
-  if (price !== undefined) product.price = Number(price);
-  if (stock !== undefined) product.stock = Number(stock);
-  if (rating !== undefined) product.rating = Number(rating);
-  if (imageUrl !== undefined) product.imageUrl = String(imageUrl).trim();
+  const { title, category, description, price } = req.body;
+  
+  product.title = title.trim();
+  product.category = category.trim();
+  product.description = description.trim();
+  product.price = Number(price);
 
   res.json(product);
 });
@@ -312,8 +284,7 @@ router.patch("/:id", (req, res) => {
  * @swagger
  * /api/products/{id}:
  *   delete:
- *     summary: Удаляет товар
- *     description: Удаляет товар по его ID
+ *     summary: Удалить товар
  *     tags: [Products]
  *     parameters:
  *       - in: path
@@ -321,17 +292,11 @@ router.patch("/:id", (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: ID товара
- *         example: p1234567
  *     responses:
  *       204:
- *         description: Товар успешно удален (нет тела ответа)
+ *         description: Товар удален
  *       404:
  *         description: Товар не найден
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
 router.delete("/:id", (req, res) => {
   const id = req.params.id;
@@ -341,7 +306,7 @@ router.delete("/:id", (req, res) => {
     return res.status(404).json({ error: "Product not found" });
   }
 
-  products = products.filter((p) => p.id !== id);
+  products = products.filter(p => p.id !== id);
   res.status(204).send();
 });
 

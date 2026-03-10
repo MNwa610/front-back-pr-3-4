@@ -1,10 +1,12 @@
 const express = require("express");
 const cors = require("cors");
+const bcrypt = require('bcrypt');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 const logger = require("./middleware/logger");
 const productsRouter = require("./routes/products");
+const authRouter = require("./routes/auth");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,27 +24,24 @@ app.use(
         callback(new Error('Not allowed by CORS'));
       }
     },
-    methods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "Accept"],
     credentials: true
   })
 );
 app.options("*", cors());
 
+
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Интернет-магазин API',
+      title: 'Интернет-магазин API с аутентификацией',
       version: '1.0.0',
-      description: 'API для управления товарами интернет-магазина',
+      description: 'API для управления товарами с регистрацией и авторизацией',
       contact: {
         name: 'Разработчик',
         email: 'developer@example.com'
-      },
-      license: {
-        name: 'MIT',
-        url: 'https://opensource.org/licenses/MIT'
       }
     },
     servers: [
@@ -53,6 +52,38 @@ const swaggerOptions = {
     ],
     components: {
       schemas: {
+        User: {
+          type: 'object',
+          required: ['email', 'first_name', 'last_name', 'password'],
+          properties: {
+            id: {
+              type: 'string',
+              description: 'Уникальный идентификатор пользователя',
+              example: 'u1234567'
+            },
+            email: {
+              type: 'string',
+              format: 'email',
+              description: 'Email пользователя (логин)',
+              example: 'user@example.com'
+            },
+            first_name: {
+              type: 'string',
+              description: 'Имя пользователя',
+              example: 'Иван'
+            },
+            last_name: {
+              type: 'string',
+              description: 'Фамилия пользователя',
+              example: 'Иванов'
+            },
+            password: {
+              type: 'string',
+              description: 'Хешированный пароль',
+              example: '$2b$10$...'
+            }
+          }
+        },
         Product: {
           type: 'object',
           required: ['title', 'category', 'price'],
@@ -75,31 +106,13 @@ const swaggerOptions = {
             description: {
               type: 'string',
               description: 'Описание товара',
-              example: 'Классическое хрустящее печенье с ванильным вкусом'
+              example: 'Классическое хрустящее печенье'
             },
             price: {
               type: 'number',
-              description: 'Цена товара в рублях',
+              description: 'Цена товара',
               minimum: 0,
               example: 79
-            },
-            stock: {
-              type: 'integer',
-              description: 'Количество товара на складе',
-              minimum: 0,
-              example: 20
-            },
-            rating: {
-              type: 'number',
-              description: 'Рейтинг товара (0-5)',
-              minimum: 0,
-              maximum: 5,
-              example: 4.6
-            },
-            imageUrl: {
-              type: 'string',
-              description: 'URL изображения товара',
-              example: 'https://example.com/image.jpg'
             }
           }
         },
@@ -123,20 +136,25 @@ const swaggerOptions = {
     },
     tags: [
       {
+        name: 'Auth',
+        description: 'Регистрация и авторизация пользователей'
+      },
+      {
         name: 'Products',
         description: 'Управление товарами'
       }
     ]
   },
-  apis: ['./routes/*.js'], 
+  apis: ['./routes/*.js'],
 };
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: "Интернет-магазин API Документация",
+  customSiteTitle: "Интернет-магазин API",
   swaggerOptions: {
     persistAuthorization: true,
     displayRequestDuration: true,
@@ -150,11 +168,19 @@ app.get('/api-docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
+app.get("/", (req, res) => {
+  res.send("Интернет-магазин API работает. Используйте /api-docs для документации");
+});
+
+
+app.use("/api/auth", authRouter);
 app.use("/api/products", productsRouter);
+
 
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
+
 
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);
