@@ -1,44 +1,33 @@
 const express = require("express");
 const cors = require("cors");
-const bcrypt = require('bcrypt');
 const swaggerJsdoc = require('swagger-jsdoc');
 const swaggerUi = require('swagger-ui-express');
 
 const logger = require("./middleware/logger");
 const productsRouter = require("./routes/products");
 const authRouter = require("./routes/auth");
+const config = require("./config");
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = config.PORT;
 
 app.use(express.json());
 app.use(logger);
 
-const allowedOrigins = ['http://localhost:3001', 'http://localhost:3002'];
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'));
-      }
-    },
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
-    credentials: true
-  })
-);
-app.options("*", cors());
-
+app.use(cors({
+  origin: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "Accept"],
+  credentials: true
+}));
 
 const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Интернет-магазин API с аутентификацией',
+      title: 'Интернет-магазин API с JWT аутентификацией',
       version: '1.0.0',
-      description: 'API для управления товарами с регистрацией и авторизацией',
+      description: 'API для управления товарами с JWT токенами',
       contact: {
         name: 'Разработчик',
         email: 'developer@example.com'
@@ -51,6 +40,14 @@ const swaggerOptions = {
       }
     ],
     components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+          description: 'Введите JWT токен в формате: Bearer <token>'
+        }
+      },
       schemas: {
         User: {
           type: 'object',
@@ -76,11 +73,6 @@ const swaggerOptions = {
               type: 'string',
               description: 'Фамилия пользователя',
               example: 'Иванов'
-            },
-            password: {
-              type: 'string',
-              description: 'Хешированный пароль',
-              example: '$2b$10$...'
             }
           }
         },
@@ -131,17 +123,40 @@ const swaggerOptions = {
               description: 'Список ошибок валидации'
             }
           }
+        },
+        TokenResponse: {
+          type: 'object',
+          properties: {
+            accessToken: {
+              type: 'string',
+              description: 'JWT access токен (срок жизни 15 минут)',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+            },
+            refreshToken: {
+              type: 'string',
+              description: 'JWT refresh токен (срок жизни 7 дней)',
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+            },
+            user: {
+              $ref: '#/components/schemas/User'
+            }
+          }
         }
       }
     },
+    security: [
+      {
+        bearerAuth: []
+      }
+    ],
     tags: [
       {
         name: 'Auth',
-        description: 'Регистрация и авторизация пользователей'
+        description: 'Регистрация, вход и управление профилем'
       },
       {
         name: 'Products',
-        description: 'Управление товарами'
+        description: 'Управление товарами (требуется аутентификация)'
       }
     ]
   },
@@ -150,11 +165,10 @@ const swaggerOptions = {
 
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
-
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: "Интернет-магазин API",
+  customSiteTitle: "Интернет-магазин API с JWT",
   swaggerOptions: {
     persistAuthorization: true,
     displayRequestDuration: true,
@@ -169,18 +183,15 @@ app.get('/api-docs.json', (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Интернет-магазин API работает. Используйте /api-docs для документации");
+  res.send("Интернет-магазин API с JWT работает. Используйте /api-docs для документации");
 });
-
 
 app.use("/api/auth", authRouter);
 app.use("/api/products", productsRouter);
 
-
 app.use((req, res) => {
   res.status(404).json({ error: "Not found" });
 });
-
 
 app.use((err, req, res, next) => {
   console.error("Unhandled error:", err);

@@ -1,5 +1,6 @@
 const express = require("express");
 const { nanoid } = require("nanoid");
+const authMiddleware = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -117,8 +118,10 @@ function validateProduct(data) {
  * @swagger
  * /api/products:
  *   post:
- *     summary: Создать новый товар
+ *     summary: Создать новый товар (требуется аутентификация)
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -142,14 +145,12 @@ function validateProduct(data) {
  *     responses:
  *       201:
  *         description: Товар создан
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
  *       400:
  *         description: Ошибка валидации
+ *       401:
+ *         description: Не авторизован
  */
-router.post("/", (req, res) => {
+router.post("/", authMiddleware, (req, res) => {
   const errors = validateProduct(req.body);
   if (errors.length > 0) {
     return res.status(400).json({ errors });
@@ -173,19 +174,17 @@ router.post("/", (req, res) => {
  * @swagger
  * /api/products:
  *   get:
- *     summary: Получить список всех товаров
+ *     summary: Получить список всех товаров (требуется аутентификация)
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Список товаров
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Product'
+ *       401:
+ *         description: Не авторизован
  */
-router.get("/", (req, res) => {
+router.get("/", authMiddleware, (req, res) => {
   res.json(products);
 });
 
@@ -193,8 +192,10 @@ router.get("/", (req, res) => {
  * @swagger
  * /api/products/{id}:
  *   get:
- *     summary: Получить товар по ID
+ *     summary: Получить товар по ID (требуется аутентификация)
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -204,14 +205,12 @@ router.get("/", (req, res) => {
  *     responses:
  *       200:
  *         description: Товар найден
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Product'
+ *       401:
+ *         description: Не авторизован
  *       404:
  *         description: Товар не найден
  */
-router.get("/:id", (req, res) => {
+router.get("/:id", authMiddleware, (req, res) => {
   const product = findProductById(req.params.id);
   if (!product) {
     return res.status(404).json({ error: "Product not found" });
@@ -223,8 +222,10 @@ router.get("/:id", (req, res) => {
  * @swagger
  * /api/products/{id}:
  *   put:
- *     summary: Полное обновление товара
+ *     summary: Полное обновление товара (требуется аутентификация)
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -256,10 +257,12 @@ router.get("/:id", (req, res) => {
  *         description: Товар обновлен
  *       400:
  *         description: Ошибка валидации
+ *       401:
+ *         description: Не авторизован
  *       404:
  *         description: Товар не найден
  */
-router.put("/:id", (req, res) => {
+router.put("/:id", authMiddleware, (req, res) => {
   const product = findProductById(req.params.id);
   if (!product) {
     return res.status(404).json({ error: "Product not found" });
@@ -284,8 +287,10 @@ router.put("/:id", (req, res) => {
  * @swagger
  * /api/products/{id}:
  *   delete:
- *     summary: Удалить товар
+ *     summary: Удалить товар (требуется аутентификация)
  *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -295,10 +300,12 @@ router.put("/:id", (req, res) => {
  *     responses:
  *       204:
  *         description: Товар удален
+ *       401:
+ *         description: Не авторизован
  *       404:
  *         description: Товар не найден
  */
-router.delete("/:id", (req, res) => {
+router.delete("/:id", authMiddleware, (req, res) => {
   const id = req.params.id;
   const exists = products.some(p => p.id === id);
   
