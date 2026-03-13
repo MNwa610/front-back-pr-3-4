@@ -8,23 +8,35 @@ const config = require('../config');
 const router = express.Router();
 
 let users = [];
-let refreshTokens = [];
+let refreshTokens = new Set(); 
 
+/**
+ * Хеширование пароля
+ */
 async function hashPassword(password) {
   const rounds = 10;
   return bcrypt.hash(password, rounds);
 }
 
+/**
+ * Проверка пароля
+ */
 async function verifyPassword(password, hash) {
   return bcrypt.compare(password, hash);
 }
 
+/**
+ * Поиск пользователя по email
+ */
 function findUserByEmail(email) {
   return users.find(u => u.email === email) || null;
 }
 
-function generateTokens(user) {
-  const accessToken = jwt.sign(
+/**
+ * Генерация access-токена
+ */
+function generateAccessToken(user) {
+  return jwt.sign(
     {
       sub: user.id,
       email: user.email,
@@ -34,8 +46,13 @@ function generateTokens(user) {
     config.JWT_ACCESS_SECRET,
     { expiresIn: config.ACCESS_EXPIRES_IN }
   );
+}
 
-  const refreshToken = jwt.sign(
+/**
+ * Генерация refresh-токена
+ */
+function generateRefreshToken(user) {
+  return jwt.sign(
     {
       sub: user.id,
       type: 'refresh'
@@ -43,14 +60,6 @@ function generateTokens(user) {
     config.JWT_REFRESH_SECRET,
     { expiresIn: config.REFRESH_EXPIRES_IN }
   );
-
-  refreshTokens.push({
-    token: refreshToken,
-    userId: user.id,
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
-  });
-
-  return { accessToken, refreshToken };
 }
 
 /**
@@ -94,10 +103,6 @@ function generateTokens(user) {
  *               $ref: '#/components/schemas/User'
  *       400:
  *         description: Ошибка валидации
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  *       500:
  *         description: Внутренняя ошибка сервера
  */
@@ -175,13 +180,20 @@ router.post("/register", async (req, res) => {
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/TokenResponse'
+ *               type: object
+ *               properties:
+ *                 accessToken:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                 refreshToken:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                 user:
+ *                   $ref: '#/components/schemas/User'
  *       400:
  *         description: Отсутствуют обязательные поля
  *       401:
  *         description: Неверные учетные данные
- *       500:
- *         description: Внутренняя ошибка сервера
  */
 router.post("/login", async (req, res) => {
   try {
@@ -201,7 +213,10 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Неверные учетные данные" });
     }
 
-    const { accessToken, refreshToken } = generateTokens(user);
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
+    
+    refreshTokens.add(refreshToken);
 
     const { password: _, ...userWithoutPassword } = user;
     
@@ -221,7 +236,8 @@ router.post("/login", async (req, res) => {
  * @swagger
  * /api/auth/refresh:
  *   post:
- *     summary: Обновление access токена
+ *     summary: Обновление токенов
+ *     description: Получает refresh-токен и возвращает новую пару access и refresh токенов
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -234,10 +250,11 @@ router.post("/login", async (req, res) => {
  *             properties:
  *               refreshToken:
  *                 type: string
- *                 description: Refresh токен
+ *                 description: Действующий refresh-токен
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *     responses:
  *       200:
- *         description: Новые токены
+ *         description: Новая пара токенов
  *         content:
  *           application/json:
  *             schema:
@@ -248,42 +265,47 @@ router.post("/login", async (req, res) => {
  *                 refreshToken:
  *                   type: string
  *       400:
- *         description: Refresh token is required
+ *         description: Отсутствует refreshToken
  *       401:
- *         description: Невалидный refresh токен
+ *         description: Невалидный или истекший refresh-токен
  */
 router.post("/refresh", (req, res) => {
   const { refreshToken } = req.body;
 
   if (!refreshToken) {
-    return res.status(400).json({ error: "Refresh token is required" });
+    return res.status(400).json({ error: "refreshToken is required" });
   }
 
-  const storedToken = refreshTokens.find(rt => rt.token === refreshToken);
-  if (!storedToken) {
+  if (!refreshTokens.has(refreshToken)) {
     return res.status(401).json({ error: "Invalid refresh token" });
-  }
-
-  if (new Date(storedToken.expiresAt) < new Date()) {
-    refreshTokens = refreshTokens.filter(rt => rt.token !== refreshToken);
-    return res.status(401).json({ error: "Refresh token expired" });
   }
 
   try {
     const payload = jwt.verify(refreshToken, config.JWT_REFRESH_SECRET);
-    
+
     const user = users.find(u => u.id === payload.sub);
     if (!user) {
       return res.status(401).json({ error: "User not found" });
     }
 
-    const newTokens = generateTokens(user);
-    refreshTokens = refreshTokens.filter(rt => rt.token !== refreshToken);
+    refreshTokens.delete(refreshToken);
 
-    res.json(newTokens);
+    const newAccessToken = generateAccessToken(user);
+    const newRefreshToken = generateRefreshToken(user);
+    refreshTokens.add(newRefreshToken);
+
+    res.json({
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    });
+
   } catch (err) {
-    refreshTokens = refreshTokens.filter(rt => rt.token !== refreshToken);
-    return res.status(401).json({ error: "Invalid refresh token" });
+    refreshTokens.delete(refreshToken);
+    
+    return res.status(401).json({ 
+      error: "Invalid or expired refresh token",
+      details: err.message 
+    });
   }
 });
 
@@ -343,16 +365,23 @@ router.post("/logout", authMiddleware, (req, res) => {
   const { refreshToken } = req.body;
 
   if (refreshToken) {
-    refreshTokens = refreshTokens.filter(rt => rt.token !== refreshToken);
+    refreshTokens.delete(refreshToken);
   }
 
   res.json({ message: "Logged out successfully" });
 });
 
+
 if (process.env.NODE_ENV === 'development') {
   router.get("/debug/users", (req, res) => {
     const usersWithoutPasswords = users.map(({ password, ...user }) => user);
     res.json(usersWithoutPasswords);
+  });
+
+  router.get("/debug/tokens", (req, res) => {
+    res.json({
+      activeTokens: Array.from(refreshTokens)
+    });
   });
 }
 
