@@ -1,42 +1,50 @@
-import { api } from "./apiClient";
+import { apiClient } from './apiClient';
+
+export const productsApi = {
+  getAll: async () => {
+    try {
+      const response = await apiClient.get('/products');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+  getById: async (id) => {
+    try {
+      const response = await apiClient.get(`/products/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 
 
-export async function getProducts() {
-  try {
-    const response = await api.get("/products");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    throw error;
+  create: async (productData) => {
+    try {
+      const response = await apiClient.post('/products', productData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+
+  update: async (id, productData) => {
+    try {
+      const response = await apiClient.put(`/products/${id}`, productData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+
+  delete: async (id) => {
+    try {
+      await apiClient.delete(`/products/${id}`);
+      return true;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
   }
-}
-
-export async function createProduct(payload) {
-  try {
-    const response = await api.post("/products", payload);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating product:", error);
-    throw error;
-  }
-}
-
-export async function updateProduct(id, patch) {
-  try {
-    const response = await api.patch(`/products/${id}`, patch);
-    return response.data;
-  } catch (error) {
-    console.error("Error updating product:", error);
-    throw error;
-  }
-}
-
-export async function deleteProduct(id) {
-  try {
-    const response = await api.delete(`/products/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting product:", error);
-    throw error;
-  }
-}
+};
