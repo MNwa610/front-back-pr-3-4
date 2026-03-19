@@ -1,12 +1,6 @@
 const jwt = require('jsonwebtoken');
 const config = require('../config');
 
-/**
- * Middleware для проверки JWT токена
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next function
- */
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization || "";
   const [scheme, token] = authHeader.split(" ");
@@ -25,7 +19,8 @@ function authMiddleware(req, res, next) {
       id: payload.sub,
       email: payload.email,
       first_name: payload.first_name,
-      last_name: payload.last_name
+      last_name: payload.last_name,
+      role: payload.role || config.ROLES.USER
     };
     
     next();

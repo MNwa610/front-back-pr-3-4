@@ -1,6 +1,8 @@
 const express = require("express");
 const { nanoid } = require("nanoid");
 const authMiddleware = require('../middleware/auth');
+const roleMiddleware = require('../middleware/roles');
+const config = require('../config');
 
 const router = express.Router();
 
@@ -77,33 +79,23 @@ let products = [
   }
 ];
 
-/**
- * Поиск товара по ID
- * @param {string} id - ID товара
- * @returns {Object|null} - Найденный товар или null
- */
 function findProductById(id) {
   return products.find(p => p.id === id) || null;
 }
 
-/**
- * Валидация товара
- * @param {Object} data - Данные товара
- * @returns {string[]} - Массив ошибок
- */
 function validateProduct(data) {
   const errors = [];
   
   if (!data.title || typeof data.title !== "string" || data.title.trim() === "") {
-    errors.push("title is required (string)");
+    errors.push("title is required");
   }
   
   if (!data.category || typeof data.category !== "string" || data.category.trim() === "") {
-    errors.push("category is required (string)");
+    errors.push("category is required");
   }
   
   if (!data.description || typeof data.description !== "string") {
-    errors.push("description is required (string)");
+    errors.push("description is required");
   }
   
   const price = Number(data.price);
@@ -117,8 +109,56 @@ function validateProduct(data) {
 /**
  * @swagger
  * /api/products:
+ *   get:
+ *     summary: Получить список всех товаров (доступно всем аутентифицированным пользователям)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Список товаров
+ *       401:
+ *         description: Не авторизован
+ */
+router.get("/", authMiddleware, (req, res) => {
+  res.json(products);
+});
+
+/**
+ * @swagger
+ * /api/products/{id}:
+ *   get:
+ *     summary: Получить товар по ID (доступно всем аутентифицированным пользователям)
+ *     tags: [Products]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Товар найден
+ *       401:
+ *         description: Не авторизован
+ *       404:
+ *         description: Товар не найден
+ */
+router.get("/:id", authMiddleware, (req, res) => {
+  const product = findProductById(req.params.id);
+  if (!product) {
+    return res.status(404).json({ error: "Product not found" });
+  }
+  res.json(product);
+});
+
+/**
+ * @swagger
+ * /api/products:
  *   post:
- *     summary: Создать новый товар (требуется аутентификация)
+ *     summary: Создать новый товар (только для продавца и администратора)
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
@@ -149,8 +189,10 @@ function validateProduct(data) {
  *         description: Ошибка валидации
  *       401:
  *         description: Не авторизован
+ *       403:
+ *         description: Доступ запрещен (требуется роль seller или admin)
  */
-router.post("/", authMiddleware, (req, res) => {
+router.post("/", authMiddleware, roleMiddleware([config.ROLES.SELLER, config.ROLES.ADMIN]), (req, res) => {
   const errors = validateProduct(req.body);
   if (errors.length > 0) {
     return res.status(400).json({ errors });
@@ -172,57 +214,9 @@ router.post("/", authMiddleware, (req, res) => {
 
 /**
  * @swagger
- * /api/products:
- *   get:
- *     summary: Получить список всех товаров (требуется аутентификация)
- *     tags: [Products]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       200:
- *         description: Список товаров
- *       401:
- *         description: Не авторизован
- */
-router.get("/", authMiddleware, (req, res) => {
-  res.json(products);
-});
-
-/**
- * @swagger
- * /api/products/{id}:
- *   get:
- *     summary: Получить товар по ID (требуется аутентификация)
- *     tags: [Products]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Товар найден
- *       401:
- *         description: Не авторизован
- *       404:
- *         description: Товар не найден
- */
-router.get("/:id", authMiddleware, (req, res) => {
-  const product = findProductById(req.params.id);
-  if (!product) {
-    return res.status(404).json({ error: "Product not found" });
-  }
-  res.json(product);
-});
-
-/**
- * @swagger
  * /api/products/{id}:
  *   put:
- *     summary: Полное обновление товара (требуется аутентификация)
+ *     summary: Обновить товар (только для продавца и администратора)
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
@@ -259,10 +253,12 @@ router.get("/:id", authMiddleware, (req, res) => {
  *         description: Ошибка валидации
  *       401:
  *         description: Не авторизован
+ *       403:
+ *         description: Доступ запрещен
  *       404:
  *         description: Товар не найден
  */
-router.put("/:id", authMiddleware, (req, res) => {
+router.put("/:id", authMiddleware, roleMiddleware([config.ROLES.SELLER, config.ROLES.ADMIN]), (req, res) => {
   const product = findProductById(req.params.id);
   if (!product) {
     return res.status(404).json({ error: "Product not found" });
@@ -287,7 +283,7 @@ router.put("/:id", authMiddleware, (req, res) => {
  * @swagger
  * /api/products/{id}:
  *   delete:
- *     summary: Удалить товар (требуется аутентификация)
+ *     summary: Удалить товар (только для администратора)
  *     tags: [Products]
  *     security:
  *       - bearerAuth: []
@@ -302,10 +298,12 @@ router.put("/:id", authMiddleware, (req, res) => {
  *         description: Товар удален
  *       401:
  *         description: Не авторизован
+ *       403:
+ *         description: Доступ запрещен (только для администратора)
  *       404:
  *         description: Товар не найден
  */
-router.delete("/:id", authMiddleware, (req, res) => {
+router.delete("/:id", authMiddleware, roleMiddleware([config.ROLES.ADMIN]), (req, res) => {
   const id = req.params.id;
   const exists = products.some(p => p.id === id);
   

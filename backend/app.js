@@ -6,6 +6,7 @@ const swaggerUi = require('swagger-ui-express');
 const logger = require("./middleware/logger");
 const productsRouter = require("./routes/products");
 const authRouter = require("./routes/auth");
+const usersRouter = require("./routes/users");
 const config = require("./config");
 
 const app = express();
@@ -25,9 +26,9 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Интернет-магазин API с JWT аутентификацией',
+      title: 'Интернет-магазин API с RBAC',
       version: '1.0.0',
-      description: 'API для управления товарами с JWT токенами',
+      description: 'API для управления товарами с системой ролей (RBAC)',
       contact: {
         name: 'Разработчик',
         email: 'developer@example.com'
@@ -73,6 +74,17 @@ const swaggerOptions = {
               type: 'string',
               description: 'Фамилия пользователя',
               example: 'Иванов'
+            },
+            role: {
+              type: 'string',
+              enum: ['user', 'seller', 'admin'],
+              description: 'Роль пользователя',
+              example: 'user'
+            },
+            isActive: {
+              type: 'boolean',
+              description: 'Статус активности',
+              example: true
             }
           }
         },
@@ -115,12 +127,9 @@ const swaggerOptions = {
               type: 'string',
               description: 'Сообщение об ошибке'
             },
-            errors: {
-              type: 'array',
-              items: {
-                type: 'string'
-              },
-              description: 'Список ошибок валидации'
+            details: {
+              type: 'string',
+              description: 'Детали ошибки'
             }
           }
         },
@@ -129,13 +138,11 @@ const swaggerOptions = {
           properties: {
             accessToken: {
               type: 'string',
-              description: 'JWT access токен (срок жизни 15 минут)',
-              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+              description: 'JWT access токен (срок жизни 15 минут)'
             },
             refreshToken: {
               type: 'string',
-              description: 'JWT refresh токен (срок жизни 7 дней)',
-              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+              description: 'JWT refresh токен (срок жизни 7 дней)'
             },
             user: {
               $ref: '#/components/schemas/User'
@@ -155,8 +162,12 @@ const swaggerOptions = {
         description: 'Регистрация, вход и управление профилем'
       },
       {
+        name: 'Users',
+        description: 'Управление пользователями (только для администратора)'
+      },
+      {
         name: 'Products',
-        description: 'Управление товарами (требуется аутентификация)'
+        description: 'Управление товарами (доступ зависит от роли)'
       }
     ]
   },
@@ -168,7 +179,7 @@ const swaggerSpec = swaggerJsdoc(swaggerOptions);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   explorer: true,
   customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: "Интернет-магазин API с JWT",
+  customSiteTitle: "Интернет-магазин API с RBAC",
   swaggerOptions: {
     persistAuthorization: true,
     displayRequestDuration: true,
@@ -183,10 +194,11 @@ app.get('/api-docs.json', (req, res) => {
 });
 
 app.get("/", (req, res) => {
-  res.send("Интернет-магазин API с JWT работает. Используйте /api-docs для документации");
+  res.send("Интернет-магазин API с RBAC работает. Используйте /api-docs для документации");
 });
 
 app.use("/api/auth", authRouter);
+app.use("/api/users", usersRouter);
 app.use("/api/products", productsRouter);
 
 app.use((req, res) => {
